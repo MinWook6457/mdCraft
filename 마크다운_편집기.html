@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MDCRAFT — 마크다운 에디터</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.1/marked.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+KR:wght@300;400;500;700&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deep: #0a0a0f;
+    --bg-editor: #0f0f18;
+    --bg-preview: #faf9f7;
+    --bg-toolbar: #12121e;
+    --border: #1e1e30;
+    --accent: #6c5ce7;
+    --accent-glow: rgba(108, 92, 231, 0.3);
+    --accent-hover: #7c6df7;
+    --text-editor: #c8c8d8;
+    --text-preview: #1a1a2e;
+    --text-muted: #555577;
+    --line-num: #2a2a44;
+    --cursor: #6c5ce7;
+    --scrollbar-thumb: #2a2a44;
+    --green: #00d2a0;
+    --orange: #ff9f43;
+    --pink: #fd79a8;
+    --blue: #0984e3;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg-deep);
+    color: var(--text-editor);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ─── HEADER ─── */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    background: var(--bg-deep);
+    border-bottom: 1px solid var(--border);
+    z-index: 100;
+    flex-shrink: 0;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, var(--accent), var(--pink));
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    color: #fff;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: -1px;
+  }
+
+  .logo-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: 2px;
+  }
+
+  .logo-text span {
+    color: var(--accent);
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .header-btn {
+    background: var(--bg-toolbar);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .header-btn:hover {
+    color: #fff;
+    border-color: var(--accent);
+    background: rgba(108, 92, 231, 0.1);
+  }
+
+  .header-btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .header-btn.primary:hover {
+    background: var(--accent-hover);
+  }
+
+  /* ─── TOOLBAR ─── */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    padding: 8px 24px;
+    background: var(--bg-toolbar);
+    border-bottom: 1px solid var(--border);
+    gap: 4px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+
+  .toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .toolbar-divider {
+    width: 1px;
+    height: 20px;
+    background: var(--border);
+    margin: 0 8px;
+  }
+
+  .tool-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    transition: all 0.15s;
+    position: relative;
+  }
+
+  .tool-btn:hover {
+    background: rgba(108, 92, 231, 0.15);
+    color: var(--accent);
+  }
+
+  .tool-btn:active {
+    transform: scale(0.92);
+  }
+
+  .tool-btn svg {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* ─── MAIN LAYOUT ─── */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ─── EDITOR PANEL ─── */
+  .editor-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-editor);
+    min-width: 0;
+    position: relative;
+  }
+
+  .panel-label {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    opacity: 0.5;
+    z-index: 5;
+    pointer-events: none;
+  }
+
+  .editor-wrapper {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #editor {
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-editor);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    line-height: 1.75;
+    padding: 20px 24px;
+    resize: none;
+    tab-size: 2;
+    caret-color: var(--cursor);
+    overflow-y: auto;
+  }
+
+  #editor::placeholder {
+    color: var(--text-muted);
+    opacity: 0.4;
+  }
+
+  #editor::-webkit-scrollbar {
+    width: 6px;
+  }
+  #editor::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  #editor::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 3px;
+  }
+
+  /* ─── RESIZE HANDLE ─── */
+  .resize-handle {
+    width: 5px;
+    cursor: col-resize;
+    background: var(--border);
+    transition: background 0.2s;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .resize-handle::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 3px;
+    height: 40px;
+    background: var(--text-muted);
+    border-radius: 2px;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .resize-handle:hover {
+    background: var(--accent);
+  }
+
+  .resize-handle:hover::after {
+    opacity: 0.5;
+  }
+
+  /* ─── PREVIEW PANEL ─── */
+  .preview-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-preview);
+    min-width: 0;
+    position: relative;
+  }
+
+  .preview-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 32px 40px;
+    scroll-behavior: smooth;
+  }
+
+  .preview-content::-webkit-scrollbar {
+    width: 6px;
+  }
+  .preview-content::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .preview-content::-webkit-scrollbar-thumb {
+    background: #d0cfc8;
+    border-radius: 3px;
+  }
+
+  /* ─── MARKDOWN RENDERED STYLES ─── */
+  .markdown-body {
+    font-family: 'Noto Sans KR', sans-serif;
+    color: var(--text-preview);
+    line-height: 1.8;
+    font-size: 15px;
+    max-width: 100%;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .markdown-body h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.4em;
+    font-weight: 700;
+    color: #0f0f1a;
+    margin: 1.2em 0 0.6em;
+    padding-bottom: 0.3em;
+    border-bottom: 3px solid var(--accent);
+    letter-spacing: -0.5px;
+    line-height: 1.3;
+  }
+
+  .markdown-body h1:first-child { margin-top: 0; }
+
+  .markdown-body h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8em;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin: 1.4em 0 0.5em;
+    padding-bottom: 0.2em;
+    border-bottom: 1px solid #e0ddd6;
+    line-height: 1.35;
+  }
+
+  .markdown-body h3 {
+    font-size: 1.3em;
+    font-weight: 700;
+    color: #2a2a40;
+    margin: 1.2em 0 0.4em;
+  }
+
+  .markdown-body h4, .markdown-body h5, .markdown-body h6 {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #3a3a55;
+    margin: 1em 0 0.3em;
+  }
+
+  .markdown-body p {
+    margin: 0.8em 0;
+    word-break: keep-all;
+  }
+
+  .markdown-body a {
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s;
+  }
+
+  .markdown-body a:hover {
+    border-bottom-color: var(--accent);
+  }
+
+  .markdown-body strong {
+    font-weight: 700;
+    color: #0f0f1a;
+  }
+
+  .markdown-body em {
+    font-style: italic;
+    color: #3a3a55;
+  }
+
+  .markdown-body blockquote {
+    margin: 1em 0;
+    padding: 12px 20px;
+    border-left: 4px solid var(--accent);
+    background: rgba(108, 92, 231, 0.04);
+    border-radius: 0 8px 8px 0;
+    color: #3a3a55;
+    font-style: italic;
+  }
+
+  .markdown-body blockquote p { margin: 0.3em 0; }
+
+  .markdown-body code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.88em;
+    background: #eeecea;
+    color: #d63384;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .markdown-body .code-block-wrapper {
+    margin: 1em 0;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #1e1e2e;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+    position: relative;
+  }
+
+  .code-block-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: #282840;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    user-select: none;
+  }
+
+  .code-block-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .code-block-dots {
+    display: flex;
+    gap: 6px;
+  }
+
+  .code-block-dots span {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: block;
+  }
+
+  .code-block-dots span:nth-child(1) { background: #ff5f57; }
+  .code-block-dots span:nth-child(2) { background: #febc2e; }
+  .code-block-dots span:nth-child(3) { background: #28c840; }
+
+  .code-block-lang {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #888aaa;
+    letter-spacing: 0.5px;
+    text-transform: lowercase;
+  }
+
+  .code-block-header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .code-copy-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #888aaa;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .code-copy-btn:hover {
+    background: rgba(255,255,255,0.08);
+    color: #c8c8d8;
+    border-color: rgba(255,255,255,0.2);
+  }
+
+  .code-copy-btn.copied {
+    color: #28c840;
+    border-color: rgba(40, 200, 64, 0.3);
+  }
+
+  .code-copy-btn svg {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .code-block-collapse-btn {
+    display: flex;
+    align-items: center;
+    background: transparent;
+    border: none;
+    color: #888aaa;
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 4px;
+    transition: all 0.2s;
+  }
+
+  .code-block-collapse-btn:hover {
+    color: #c8c8d8;
+    background: rgba(255,255,255,0.08);
+  }
+
+  .code-block-collapse-btn svg {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform 0.2s;
+  }
+
+  .code-block-wrapper.collapsed .code-block-collapse-btn svg {
+    transform: rotate(-90deg);
+  }
+
+  .code-block-wrapper.collapsed pre {
+    display: none;
+  }
+
+  .markdown-body pre {
+    margin: 0;
+    border-radius: 0;
+    overflow: hidden;
+    background: #1e1e2e;
+  }
+
+  .markdown-body pre code {
+    display: block;
+    padding: 20px;
+    background: transparent;
+    color: #c8c8d8;
+    font-size: 13px;
+    line-height: 1.7;
+    overflow-x: auto;
+    border-radius: 0;
+  }
+
+  .markdown-body ul, .markdown-body ol {
+    margin: 0.8em 0;
+    padding-left: 1.8em;
+  }
+
+  .markdown-body li {
+    margin: 0.3em 0;
+  }
+
+  .markdown-body li::marker {
+    color: var(--accent);
+  }
+
+  .markdown-body hr {
+    border: none;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #d0cfc8, transparent);
+    margin: 2em 0;
+  }
+
+  .markdown-body img {
+    max-width: 100%;
+    border-radius: 10px;
+    margin: 1em 0;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  }
+
+  .markdown-body table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1em 0;
+    font-size: 14px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+
+  .markdown-body th {
+    background: #1a1a2e;
+    color: #fff;
+    font-weight: 600;
+    padding: 12px 16px;
+    text-align: left;
+  }
+
+  .markdown-body td {
+    padding: 10px 16px;
+    border-bottom: 1px solid #e8e6e0;
+  }
+
+  .markdown-body tr:nth-child(even) td {
+    background: rgba(0,0,0,0.015);
+  }
+
+  .markdown-body input[type="checkbox"] {
+    accent-color: var(--accent);
+    margin-right: 6px;
+    transform: scale(1.1);
+  }
+
+  .markdown-body del {
+    color: #999;
+  }
+
+  /* ─── STATUS BAR ─── */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 24px;
+    background: var(--bg-deep);
+    border-top: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  .status-left, .status-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    background: var(--green);
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+    box-shadow: 0 0 6px rgba(0, 210, 160, 0.5);
+    animation: pulse 2s ease infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 768px) {
+    .main { flex-direction: column; }
+    .resize-handle { display: none; }
+    .editor-panel, .preview-panel { flex: none; height: 50%; }
+    .preview-content { padding: 20px; }
+    .toolbar { padding: 6px 12px; }
+    .header { padding: 10px 16px; }
+  }
+
+  /* ─── VIEW MODES ─── */
+
+  /* ─── DROP OVERLAY ─── */
+  .drop-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(108, 92, 231, 0.12);
+    backdrop-filter: blur(4px);
+    border: 2px dashed var(--accent);
+    border-radius: 8px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    margin: 8px;
+  }
+
+  .drop-overlay.active {
+    display: flex;
+  }
+
+  .drop-overlay-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    color: var(--accent);
+    animation: dropBounce 0.3s ease;
+  }
+
+  .drop-overlay-content svg {
+    opacity: 0.8;
+  }
+
+  .drop-overlay-content span {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+
+  @keyframes dropBounce {
+    0% { transform: scale(0.9); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  /* ─── FILE NAME BADGE ─── */
+  .file-badge {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    background: rgba(108, 92, 231, 0.15);
+    border: 1px solid rgba(108, 92, 231, 0.3);
+    color: var(--accent);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .file-badge.active {
+    display: flex;
+  }
+
+  .file-badge svg {
+    width: 12px;
+    height: 12px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    flex-shrink: 0;
+  }
+
+  /* ─── VIEW MODES (cont.) ─── */
+  .main.editor-only .preview-panel,
+  .main.editor-only .resize-handle { display: none; }
+  .main.preview-only .editor-panel,
+  .main.preview-only .resize-handle { display: none; }
+
+  /* ─── Fullscreen animation ─── */
+  .main { transition: all 0.3s ease; }
+
+  /* Tooltip */
+  .tool-btn[data-tooltip]:hover::before {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a1a2e;
+    color: #fff;
+    font-size: 10px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    z-index: 100;
+    font-weight: 400;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <div class="logo-icon">M↓</div>
+    <div class="logo-text">MD<span>CRAFT</span></div>
+  </div>
+  <div class="header-actions">
+    <button class="header-btn" onclick="switchView('split')" id="btn-split">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+      분할
+    </button>
+    <button class="header-btn" onclick="switchView('editor-only')" id="btn-editor">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+      에디터
+    </button>
+    <button class="header-btn" onclick="switchView('preview-only')" id="btn-preview">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+      미리보기
+    </button>
+    <button class="header-btn" onclick="document.getElementById('fileInput').click()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      열기
+    </button>
+    <input type="file" id="fileInput" accept=".md,.markdown,.txt" style="display:none" onchange="handleFileUpload(event)">
+    <button class="header-btn primary" onclick="downloadMarkdown()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      저장
+    </button>
+  </div>
+</div>
+
+<div class="toolbar">
+  <div class="toolbar-group">
+    <button class="tool-btn" data-tooltip="제목 1" onclick="insertText('# ', '')"><b style="font-size:15px">H1</b></button>
+    <button class="tool-btn" data-tooltip="제목 2" onclick="insertText('## ', '')"><b style="font-size:13px">H2</b></button>
+    <button class="tool-btn" data-tooltip="제목 3" onclick="insertText('### ', '')"><b style="font-size:11px">H3</b></button>
+  </div>
+  <div class="toolbar-divider"></div>
+  <div class="toolbar-group">
+    <button class="tool-btn" data-tooltip="굵게" onclick="wrapText('**', '**')">
+      <svg viewBox="0 0 24 24"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg>
+    </button>
+    <button class="tool-btn" data-tooltip="기울임" onclick="wrapText('*', '*')">
+      <svg viewBox="0 0 24 24"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg>
+    </button>
+    <button class="tool-btn" data-tooltip="취소선" onclick="wrapText('~~', '~~')">
+      <svg viewBox="0 0 24 24"><path d="M16 4H9a3 3 0 0 0-3 3v0a3 3 0 0 0 3 3h6a3 3 0 0 1 3 3v0a3 3 0 0 1-3 3H8"/><line x1="4" y1="12" x2="20" y2="12"/></svg>
+    </button>
+    <button class="tool-btn" data-tooltip="인라인 코드" onclick="wrapText('`', '`')">
+      <svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+    </button>
+  </div>
+  <div class="toolbar-divider"></div>
+  <div class="toolbar-group">
+    <button class="tool-btn" data-tooltip="순서 없는 목록" onclick="insertText('- ', '')">
+      <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="18" r="1" fill="currentColor"/></svg>
+    </button>
+    <button class="tool-btn" data-tooltip="순서 있는 목록" onclick="insertText('1. ', '')">
+      <svg viewBox="0 0 24 24"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><text x="2" y="8" font-size="8" fill="currentColor" font-family="monospace">1.</text><text x="2" y="14" font-size="8" fill="currentColor" font-family="monospace">2.</text><text x="2" y="20" font-size="8" fill="currentColor" font-family="monospace">3.</text></svg>
+    </button>
+    <button class="tool-btn" data-tooltip="체크리스트" onclick="insertText('- [ ] ', '')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="5" width="6" height="6" rx="1"/><polyline points="4 11 6 13 10 7" stroke-width="1.5"/><line x1="13" y1="8" x2="21" y2="8"/><rect x="3" y="14" width="6" height="6" rx="1"/><line x1="13" y1="17" x2="21" y2="17"/></svg>
+    </button>
+  </div>
+  <div class="toolbar-divider"></div>
+  <div class="toolbar-group">
+    <button class="tool-btn" data-tooltip="인용문" onclick="insertText('> ', '')">
+      <svg viewBox="0 0 24 24"><path d="M6 17h3l2-4V7H5v6h3"/><path d="M15 17h3l2-4V7h-6v6h3"/></svg>
+    </button>
+    <button class="tool-btn" data-tooltip="코드 블록" onclick="wrapText('\n```\n', '\n```\n')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><polyline points="9 8 5 12 9 16"/><polyline points="15 8 19 12 15 16"/></svg>
+    </button>
+    <button class="tool-btn" data-tooltip="링크" onclick="insertLink()">
+      <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+    </button>
+    <button class="tool-btn" data-tooltip="이미지" onclick="insertImage()">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+    </button>
+    <button class="tool-btn" data-tooltip="테이블" onclick="insertTable()">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+    </button>
+    <button class="tool-btn" data-tooltip="구분선" onclick="insertText('\n---\n', '')">
+      <svg viewBox="0 0 24 24"><line x1="2" y1="12" x2="22" y2="12"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="main" id="mainArea">
+  <div class="editor-panel" id="editorPanel">
+    <span class="panel-label">MARKDOWN</span>
+    <div class="editor-wrapper">
+      <textarea id="editor" placeholder="여기에 마크다운을 작성하세요..." spellcheck="false"></textarea>
+      <div class="drop-overlay" id="dropOverlay">
+        <div class="drop-overlay-content">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span>.md 파일을 여기에 놓으세요</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="resize-handle" id="resizeHandle"></div>
+  <div class="preview-panel" id="previewPanel">
+    <span class="panel-label" style="color: #999;">PREVIEW</span>
+    <div class="preview-content">
+      <div class="markdown-body" id="preview"></div>
+    </div>
+  </div>
+</div>
+
+<div class="status-bar">
+  <div class="status-left">
+    <span><span class="status-dot"></span>실시간 미리보기</span>
+    <span class="file-badge" id="fileBadge">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span id="fileName"></span>
+    </span>
+    <span id="wordCount">0 글자 · 0 단어 · 0 줄</span>
+  </div>
+  <div class="status-right">
+    <span id="cursorPos">줄 1, 열 1</span>
+    <span>UTF-8</span>
+    <span>Markdown</span>
+  </div>
+</div>
+
+<script>
+const editor = document.getElementById('editor');
+const preview = document.getElementById('preview');
+const mainArea = document.getElementById('mainArea');
+let currentFileName = '';
+
+// ── Marked.js config ──
+marked.setOptions({
+  highlight: function(code, lang) {
+    if (lang && hljs.getLanguage(lang)) {
+      return hljs.highlight(code, { language: lang }).value;
+    }
+    return hljs.highlightAuto(code).value;
+  },
+  breaks: true,
+  gfm: true
+});
+
+// ── Default content ──
+const defaultContent = `# 🎨 MDCRAFT 마크다운 에디터에 오신 것을 환영합니다
+
+실시간으로 마크다운을 편집하고 즉시 미리보기를 확인하세요.
+
+## ✨ 주요 기능
+
+**굵은 텍스트**, *기울임 텍스트*, ~~취소선~~, 그리고 \`인라인 코드\`를 지원합니다.
+
+### 코드 블록
+
+\`\`\`javascript
+function greeting(name) {
+  const message = \`안녕하세요, \${name}님!\`;
+  console.log(message);
+  return message;
+}
+
+greeting("세계");
+\`\`\`
+
+\`\`\`python
+def fibonacci(n):
+    a, b = 0, 1
+    for _ in range(n):
+        yield a
+        a, b = b, a + b
+
+list(fibonacci(10))
+\`\`\`
+
+### 인용문
+
+> 코드는 사람이 읽기 위해 작성하는 것이고,
+> 기계가 실행하는 것은 부수적인 효과에 불과하다.
+>
+> — Harold Abelson
+
+### 목록
+
+- 📝 실시간 미리보기
+- 🎨 아름다운 렌더링
+- 💾 파일 다운로드
+- ⌨️ 단축키 지원
+
+### 체크리스트
+
+- [x] 마크다운 파서 구현
+- [x] 실시간 미리보기
+- [x] 코드 하이라이팅
+- [ ] 다크/라이트 테마 전환
+
+### 테이블
+
+| 기능 | 상태 | 비고 |
+|------|------|------|
+| 실시간 미리보기 | ✅ 완료 | GFM 지원 |
+| 코드 하이라이팅 | ✅ 완료 | highlight.js |
+| 파일 저장 | ✅ 완료 | .md 다운로드 |
+| 도구 모음 | ✅ 완료 | 원클릭 삽입 |
+
+### 수평선
+
+---
+
+> 지금 바로 왼쪽 편집기에서 마크다운을 작성해보세요! 🚀
+`;
+
+editor.value = defaultContent;
+
+// ── Render ──
+let renderTimeout;
+function render() {
+  clearTimeout(renderTimeout);
+  renderTimeout = setTimeout(() => {
+    preview.innerHTML = marked.parse(editor.value);
+    wrapCodeBlocks();
+    updateStats();
+  }, 80);
+}
+
+// ── 코드블록 macOS 헤더 래핑 ──
+function wrapCodeBlocks() {
+  const pres = preview.querySelectorAll('pre');
+  pres.forEach((pre, idx) => {
+    if (pre.parentElement.classList.contains('code-block-wrapper')) return;
+
+    const code = pre.querySelector('code');
+    let lang = '';
+    if (code) {
+      const cls = Array.from(code.classList).find(c => c.startsWith('language-'));
+      if (cls) lang = cls.replace('language-', '');
+    }
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'code-block-wrapper';
+
+    const header = document.createElement('div');
+    header.className = 'code-block-header';
+    header.innerHTML = `
+      <div class="code-block-header-left">
+        <div class="code-block-dots"><span></span><span></span><span></span></div>
+      </div>
+      <div class="code-block-header-right">
+        ${lang ? `<span class="code-block-lang">${lang}</span>` : ''}
+        <button class="code-copy-btn" data-idx="${idx}" onclick="copyCodeBlock(this)">
+          <svg class="copy-icon" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <svg class="check-icon" viewBox="0 0 24 24" style="display:none"><polyline points="20 6 9 17 4 12"/></svg>
+          <span>Copy</span>
+        </button>
+        <button class="code-block-collapse-btn" onclick="toggleCodeCollapse(this)">
+          <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+      </div>
+    `;
+
+    pre.parentNode.insertBefore(wrapper, pre);
+    wrapper.appendChild(header);
+    wrapper.appendChild(pre);
+  });
+}
+
+// ── Copy 버튼 동작 ──
+function copyCodeBlock(btn) {
+  const wrapper = btn.closest('.code-block-wrapper');
+  const code = wrapper.querySelector('pre code');
+  if (!code) return;
+
+  navigator.clipboard.writeText(code.textContent).then(() => {
+    const copyIcon = btn.querySelector('.copy-icon');
+    const checkIcon = btn.querySelector('.check-icon');
+    const label = btn.querySelector('span');
+
+    btn.classList.add('copied');
+    copyIcon.style.display = 'none';
+    checkIcon.style.display = 'block';
+    label.textContent = 'Copied!';
+
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      copyIcon.style.display = 'block';
+      checkIcon.style.display = 'none';
+      label.textContent = 'Copy';
+    }, 2000);
+  });
+}
+
+// ── 코드블록 접기/펼치기 ──
+function toggleCodeCollapse(btn) {
+  const wrapper = btn.closest('.code-block-wrapper');
+  wrapper.classList.toggle('collapsed');
+}
+
+function updateStats() {
+  const text = editor.value;
+  const chars = text.length;
+  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+  const lines = text.split('\n').length;
+  document.getElementById('wordCount').textContent = `${chars} 글자 · ${words} 단어 · ${lines} 줄`;
+}
+
+function updateCursorPos() {
+  const pos = editor.selectionStart;
+  const text = editor.value.substring(0, pos);
+  const line = text.split('\n').length;
+  const col = pos - text.lastIndexOf('\n');
+  document.getElementById('cursorPos').textContent = `줄 ${line}, 열 ${col}`;
+}
+
+editor.addEventListener('input', render);
+editor.addEventListener('click', updateCursorPos);
+editor.addEventListener('keyup', updateCursorPos);
+
+// ── Tab key support ──
+editor.addEventListener('keydown', function(e) {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const start = this.selectionStart;
+    const end = this.selectionEnd;
+    this.value = this.value.substring(0, start) + '  ' + this.value.substring(end);
+    this.selectionStart = this.selectionEnd = start + 2;
+    render();
+  }
+});
+
+// ── Keyboard shortcuts ──
+document.addEventListener('keydown', function(e) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'b') { e.preventDefault(); wrapText('**', '**'); }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'i') { e.preventDefault(); wrapText('*', '*'); }
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); downloadMarkdown(); }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); insertLink(); }
+});
+
+// ── Toolbar functions ──
+function insertText(before, after) {
+  const start = editor.selectionStart;
+  const end = editor.selectionEnd;
+  const selected = editor.value.substring(start, end);
+  const newText = before + selected + after;
+  editor.value = editor.value.substring(0, start) + newText + editor.value.substring(end);
+  editor.selectionStart = start + before.length;
+  editor.selectionEnd = start + before.length + selected.length;
+  editor.focus();
+  render();
+}
+
+function wrapText(before, after) {
+  const start = editor.selectionStart;
+  const end = editor.selectionEnd;
+  const selected = editor.value.substring(start, end) || '텍스트';
+  const newText = before + selected + after;
+  editor.value = editor.value.substring(0, start) + newText + editor.value.substring(end);
+  editor.selectionStart = start + before.length;
+  editor.selectionEnd = start + before.length + selected.length;
+  editor.focus();
+  render();
+}
+
+function insertLink() {
+  const url = 'https://example.com';
+  const text = editor.value.substring(editor.selectionStart, editor.selectionEnd) || '링크 텍스트';
+  insertText('[' + text + '](', url + ')');
+}
+
+function insertImage() {
+  const url = 'https://example.com/image.png';
+  insertText('![대체 텍스트](', url + ')');
+}
+
+function insertTable() {
+  const table = '\n| 제목 1 | 제목 2 | 제목 3 |\n|--------|--------|--------|\n| 내용 1 | 내용 2 | 내용 3 |\n| 내용 4 | 내용 5 | 내용 6 |\n';
+  insertText(table, '');
+}
+
+// ── View switching ──
+function switchView(mode) {
+  mainArea.className = 'main';
+  if (mode !== 'split') mainArea.classList.add(mode);
+  document.querySelectorAll('.header-btn').forEach(b => b.style.borderColor = '');
+  const btnMap = { split: 'btn-split', 'editor-only': 'btn-editor', 'preview-only': 'btn-preview' };
+  document.getElementById(btnMap[mode]).style.borderColor = 'var(--accent)';
+}
+
+// ── Download ──
+function downloadMarkdown() {
+  const blob = new Blob([editor.value], { type: 'text/markdown' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = currentFileName || 'document.md';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ── Resize handle ──
+const resizeHandle = document.getElementById('resizeHandle');
+const editorPanel = document.getElementById('editorPanel');
+const previewPanel = document.getElementById('previewPanel');
+let isResizing = false;
+
+resizeHandle.addEventListener('mousedown', (e) => {
+  isResizing = true;
+  document.body.style.cursor = 'col-resize';
+  document.body.style.userSelect = 'none';
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!isResizing) return;
+  const containerRect = mainArea.getBoundingClientRect();
+  const ratio = (e.clientX - containerRect.left) / containerRect.width;
+  const clamped = Math.max(0.2, Math.min(0.8, ratio));
+  editorPanel.style.flex = `0 0 ${clamped * 100}%`;
+  previewPanel.style.flex = `0 0 ${(1 - clamped) * 100}%`;
+});
+
+document.addEventListener('mouseup', () => {
+  if (isResizing) {
+    isResizing = false;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  }
+});
+
+// ── Initial render ──
+render();
+switchView('split');
+
+// ── 파일 업로드 처리 ──
+
+function handleFileUpload(event) {
+  const file = event.target.files[0];
+  if (file) loadFile(file);
+  event.target.value = '';
+}
+
+function loadFile(file) {
+  if (!file.name.match(/\.(md|markdown|txt)$/i)) {
+    alert('.md, .markdown, .txt 파일만 업로드할 수 있습니다.');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    editor.value = e.target.result;
+    currentFileName = file.name;
+    render();
+
+    // 파일명 뱃지 표시
+    document.getElementById('fileName').textContent = file.name;
+    document.getElementById('fileBadge').classList.add('active');
+  };
+  reader.readAsText(file);
+}
+
+// ── 드래그 앤 드롭 ──
+const dropOverlay = document.getElementById('dropOverlay');
+let dragCounter = 0;
+
+document.addEventListener('dragenter', (e) => {
+  e.preventDefault();
+  dragCounter++;
+  if (dragCounter === 1) {
+    dropOverlay.classList.add('active');
+  }
+});
+
+document.addEventListener('dragleave', (e) => {
+  e.preventDefault();
+  dragCounter--;
+  if (dragCounter === 0) {
+    dropOverlay.classList.remove('active');
+  }
+});
+
+document.addEventListener('dragover', (e) => {
+  e.preventDefault();
+});
+
+document.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dragCounter = 0;
+  dropOverlay.classList.remove('active');
+
+  const files = e.dataTransfer.files;
+  if (files.length > 0) {
+    loadFile(files[0]);
+  }
+});
+</script>
+</body>
+</html>
