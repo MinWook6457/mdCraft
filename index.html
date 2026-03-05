@@ -761,6 +761,174 @@
   }
 
   /* ─── VIEW MODES (cont.) ─── */
+
+  /* ─── HISTORY PANEL ─── */
+  .history-panel {
+    width: 0;
+    min-width: 0;
+    overflow: hidden;
+    background: var(--bg-editor);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    transition: width 0.25s ease, min-width 0.25s ease;
+    flex-shrink: 0;
+  }
+
+  .history-panel.open {
+    width: 300px;
+    min-width: 300px;
+  }
+
+  .history-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .history-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  .history-close-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    transition: all 0.15s;
+  }
+
+  .history-close-btn:hover {
+    color: #fff;
+    background: rgba(255,255,255,0.08);
+  }
+
+  .history-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+  }
+
+  .history-list::-webkit-scrollbar { width: 4px; }
+  .history-list::-webkit-scrollbar-track { background: transparent; }
+  .history-list::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 2px; }
+
+  .history-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 40px 16px;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-align: center;
+  }
+
+  .history-item {
+    padding: 12px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-bottom: 4px;
+    border: 1px solid transparent;
+    position: relative;
+  }
+
+  .history-item:hover {
+    background: rgba(108, 92, 231, 0.08);
+    border-color: var(--border);
+  }
+
+  .history-item-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    color: #ddd;
+    margin-bottom: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding-right: 24px;
+  }
+
+  .history-item-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+
+  .history-item-size {
+    background: rgba(108, 92, 231, 0.15);
+    color: var(--accent);
+    padding: 1px 6px;
+    border-radius: 3px;
+  }
+
+  .history-item-delete {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    opacity: 0;
+    transition: all 0.15s;
+  }
+
+  .history-item:hover .history-item-delete {
+    opacity: 1;
+  }
+
+  .history-item-delete:hover {
+    color: #ff5f57;
+    background: rgba(255, 95, 87, 0.1);
+  }
+
+  .history-item-delete svg {
+    width: 12px;
+    height: 12px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+  }
+
+  @media (max-width: 768px) {
+    .history-panel.open {
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      z-index: 200;
+      width: 280px;
+      min-width: 280px;
+      box-shadow: -4px 0 24px rgba(0,0,0,0.4);
+    }
+  }
   .main.editor-only .preview-panel,
   .main.editor-only .resize-handle { display: none; }
   .main.preview-only .editor-panel,
@@ -806,6 +974,10 @@
     <button class="header-btn" onclick="switchView('preview-only')" id="btn-preview">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
       미리보기
+    </button>
+    <button class="header-btn" onclick="toggleHistory()" id="btn-history">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      이력
     </button>
     <button class="header-btn" onclick="document.getElementById('fileInput').click()">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -897,6 +1069,25 @@
     <span class="panel-label" style="color: #999;">PREVIEW</span>
     <div class="preview-content">
       <div class="markdown-body" id="preview"></div>
+    </div>
+  </div>
+  <!-- 이력 사이드패널 -->
+  <div class="history-panel" id="historyPanel">
+    <div class="history-header">
+      <span class="history-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        저장 이력
+      </span>
+      <button class="history-close-btn" onclick="toggleHistory()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="history-list" id="historyList">
+      <div class="history-empty" id="historyEmpty">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.3"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span>저장 이력이 없습니다</span>
+        <span style="font-size:10px;opacity:0.5">저장 버튼을 누르면 이력이 남습니다</span>
+      </div>
     </div>
   </div>
 </div>
@@ -1503,6 +1694,160 @@ document.addEventListener('drop', (e) => {
     loadFile(files[0]);
   }
 });
+
+// ── 저장 이력 관리 ──
+const HISTORY_KEY = 'mdcraft-history';
+
+function getHistory() {
+  try {
+    const data = localStorage.getItem(HISTORY_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch { return []; }
+}
+
+function saveHistory(list) {
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(list));
+  } catch(e) {
+    console.warn('이력 저장 실패:', e);
+  }
+}
+
+function addToHistory() {
+  const content = editor.value;
+  if (!content.trim()) return;
+
+  const history = getHistory();
+  const name = currentFileName || 'untitled.md';
+  const now = new Date();
+
+  const entry = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    name: name,
+    content: content,
+    size: new Blob([content]).size,
+    date: now.toISOString(),
+    preview: content.replace(/[#*`~>\-\[\]|]/g, '').trim().substring(0, 80)
+  };
+
+  // 최대 30개까지 유지
+  history.unshift(entry);
+  if (history.length > 30) history.length = 30;
+
+  saveHistory(history);
+  renderHistoryList();
+}
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function formatDate(isoStr) {
+  const d = new Date(isoStr);
+  const now = new Date();
+  const diff = now - d;
+
+  if (diff < 60000) return '방금 전';
+  if (diff < 3600000) return Math.floor(diff / 60000) + '분 전';
+  if (diff < 86400000) return Math.floor(diff / 3600000) + '시간 전';
+  if (diff < 604800000) return Math.floor(diff / 86400000) + '일 전';
+
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const h = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  return `${y}.${m}.${day} ${h}:${min}`;
+}
+
+function renderHistoryList() {
+  const list = document.getElementById('historyList');
+  const history = getHistory();
+  const empty = document.getElementById('historyEmpty');
+
+  // 기존 아이템 제거 (empty 메시지 유지)
+  list.querySelectorAll('.history-item').forEach(el => el.remove());
+
+  if (history.length === 0) {
+    if (empty) empty.style.display = 'flex';
+    return;
+  }
+
+  if (empty) empty.style.display = 'none';
+
+  history.forEach(entry => {
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    item.onclick = () => loadFromHistory(entry.id);
+    item.innerHTML = `
+      <div class="history-item-name">${escapeHtml(entry.name)}</div>
+      <div class="history-item-meta">
+        <span>${formatDate(entry.date)}</span>
+        <span class="history-item-size">${formatFileSize(entry.size)}</span>
+      </div>
+      ${entry.preview ? `<div style="font-size:10px;color:#555577;margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:'JetBrains Mono',monospace;">${escapeHtml(entry.preview)}</div>` : ''}
+      <button class="history-item-delete" onclick="event.stopPropagation();deleteFromHistory('${entry.id}')">
+        <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      </button>
+    `;
+    list.appendChild(item);
+  });
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function loadFromHistory(id) {
+  const history = getHistory();
+  const entry = history.find(h => h.id === id);
+  if (!entry) return;
+
+  if (editor.value.trim() && editor.value !== entry.content) {
+    if (!confirm('현재 작성 중인 내용이 있습니다. 이력을 불러오시겠습니까?')) return;
+  }
+
+  editor.value = entry.content;
+  currentFileName = entry.name;
+  render();
+
+  document.getElementById('fileName').textContent = entry.name;
+  document.getElementById('fileBadge').classList.add('active');
+}
+
+function deleteFromHistory(id) {
+  if (!confirm('이 이력을 삭제하시겠습니까?')) return;
+
+  const history = getHistory().filter(h => h.id !== id);
+  saveHistory(history);
+  renderHistoryList();
+}
+
+function toggleHistory() {
+  const panel = document.getElementById('historyPanel');
+  panel.classList.toggle('open');
+  const btn = document.getElementById('btn-history');
+  if (panel.classList.contains('open')) {
+    btn.style.borderColor = 'var(--accent)';
+    renderHistoryList();
+  } else {
+    btn.style.borderColor = '';
+  }
+}
+
+// ── 기존 downloadMarkdown에 이력 저장 연동 ──
+const _originalDownload = downloadMarkdown;
+downloadMarkdown = function() {
+  addToHistory();
+  _originalDownload();
+};
+
+// ── 초기 이력 목록 렌더 ──
+renderHistoryList();
 </script>
 </body>
 </html>
