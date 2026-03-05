@@ -637,6 +637,77 @@
     color: #999;
   }
 
+  /* ─── TAB UI ─── */
+  .md-tabs {
+    margin: 1.2em 0;
+    border-radius: 10px;
+    border: 1px solid #e0ddd6;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+
+  .md-tabs-header {
+    display: flex;
+    background: #f5f4f0;
+    border-bottom: 2px solid #e0ddd6;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .md-tabs-header::-webkit-scrollbar { display: none; }
+
+  .md-tab-btn {
+    padding: 10px 20px;
+    border: none;
+    background: transparent;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: #777;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+    position: relative;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+  }
+
+  .md-tab-btn:hover {
+    color: #1a1a2e;
+    background: rgba(108, 92, 231, 0.04);
+  }
+
+  .md-tab-btn.active {
+    color: #6c5ce7;
+    font-weight: 700;
+    border-bottom-color: #6c5ce7;
+    background: #fff;
+  }
+
+  .md-tab-content {
+    display: none;
+    padding: 20px 24px;
+    animation: tabFadeIn 0.25s ease;
+  }
+
+  .md-tab-content.active {
+    display: block;
+  }
+
+  .md-tab-content > :first-child {
+    margin-top: 0;
+  }
+
+  .md-tab-content > :last-child {
+    margin-bottom: 0;
+  }
+
+  @keyframes tabFadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
   /* ─── STATUS BAR ─── */
   .status-bar {
     display: flex;
@@ -1048,6 +1119,9 @@
     <button class="tool-btn" data-tooltip="구분선" onclick="insertText('\n---\n', '')">
       <svg viewBox="0 0 24 24"><line x1="2" y1="12" x2="22" y2="12"/></svg>
     </button>
+    <button class="tool-btn" data-tooltip="탭 블록" onclick="insertTabBlock()">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="3" x2="9" y2="9"/></svg>
+    </button>
   </div>
 </div>
 
@@ -1191,20 +1265,189 @@ list(fibonacci(10))
 
 ---
 
+### 📊 탭 기능 (확장 문법)
+
+\`:::tabs\`와 \`::tab 탭이름\`으로 탭 UI를 만들 수 있습니다.
+
+:::tabs
+::tab 📋 데이터 개요
+
+## 대용량 데이터 현황
+
+현재 시스템에서 처리하는 가장 큰 데이터 기준입니다.
+
+| 구분 | 행 수 | 컬럼 수 | 예상 크기 |
+|------|-------|---------|----------|
+| 데이터셋 A | ~250,000 행 | 500 컬럼 | 약 950MB |
+| 데이터셋 B | ~170,000 행 | 2,400 컬럼 | 약 3.1GB |
+
+> 두 데이터셋 모두 실시간 조회 및 분석이 요구됩니다.
+
+::tab ⚡ 성능 이슈
+
+## 주요 성능 병목
+
+1. **메모리 사용량** — 2,400 컬럼 데이터 로딩 시 메모리 4GB 이상 점유
+2. **쿼리 응답 시간** — Full Scan 시 평균 45초 소요
+3. **인덱스 효율** — 컬럼 수 대비 인덱스 관리 비용 증가
+
+\`\`\`sql
+-- 현재 문제가 되는 쿼리 패턴
+SELECT * FROM large_table
+WHERE col_1 = 'value'
+  AND col_250 BETWEEN 100 AND 500;
+-- Execution time: ~45s (Full Table Scan)
+\`\`\`
+
+::tab 🔧 최적화 방안
+
+## 단계별 최적화 전략
+
+**1단계: 파티셔닝**
+- 날짜 기반 Range Partition 적용
+- 예상 개선: 쿼리 시간 60% 감소
+
+**2단계: 컬럼 스토어**
+- 자주 조회되는 상위 50개 컬럼 분리
+- Columnar Storage 전환
+
+**3단계: 캐시 레이어**
+- Redis 기반 Hot Data 캐싱
+- TTL 15분 설정
+
+::tab 📈 벤치마크
+
+## 벤치마크 결과
+
+| 항목 | Before | After | 개선율 |
+|------|--------|-------|--------|
+| 조회 (500컬럼) | 45s | 3.2s | **93%** |
+| 조회 (2400컬럼) | 120s | 8.7s | **93%** |
+| 메모리 사용 | 4.2GB | 1.1GB | **74%** |
+| 동시 접속 처리 | 12건 | 85건 | **608%** |
+
+> 파티셔닝 + 컬럼 스토어 + 캐시 레이어 복합 적용 결과
+
+:::
+
 > 지금 바로 왼쪽 편집기에서 마크다운을 작성해보세요! 🚀
 `;
 
 editor.value = defaultContent;
+
+// ── 탭 문법 전처리 ──
+// 문법:
+//   :::tabs
+//   ::tab 탭이름1
+//   내용...
+//   ::tab 탭이름2
+//   내용...
+//   :::
+let tabGroupCounter = 0;
+
+function preprocessTabs(md) {
+  tabGroupCounter = 0;
+  return md.replace(/:::tabs\s*\n([\s\S]*?):::/g, (match, inner) => {
+    const groupId = 'tabgroup-' + (tabGroupCounter++);
+    const tabSections = inner.split(/^::tab\s+(.+)$/gm).filter(s => s.trim() !== '');
+
+    if (tabSections.length < 2) return match;
+
+    const tabs = [];
+    for (let i = 0; i < tabSections.length; i += 2) {
+      tabs.push({
+        name: tabSections[i].trim(),
+        content: (tabSections[i + 1] || '').trim()
+      });
+    }
+
+    if (tabs.length === 0) return match;
+
+    let buttonsHtml = '<div class="md-tabs" data-group="' + groupId + '"><div class="md-tabs-header">';
+    tabs.forEach((tab, idx) => {
+      buttonsHtml += `<button class="md-tab-btn${idx === 0 ? ' active' : ''}" onclick="switchTab('${groupId}', ${idx})">${tab.name}</button>`;
+    });
+    buttonsHtml += '</div>';
+
+    tabs.forEach((tab, idx) => {
+      const parsed = marked.parse(tab.content);
+      buttonsHtml += `<div class="md-tab-content${idx === 0 ? ' active' : ''}" data-tab-idx="${idx}">${parsed}</div>`;
+    });
+
+    buttonsHtml += '</div>';
+    return buttonsHtml;
+  });
+}
+
+function switchTab(groupId, idx) {
+  const group = document.querySelector(`.md-tabs[data-group="${groupId}"]`);
+  if (!group) return;
+
+  group.querySelectorAll('.md-tab-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', i === idx);
+  });
+  group.querySelectorAll('.md-tab-content').forEach((content, i) => {
+    content.classList.toggle('active', i === idx);
+  });
+}
 
 // ── Render ──
 let renderTimeout;
 function render() {
   clearTimeout(renderTimeout);
   renderTimeout = setTimeout(() => {
-    preview.innerHTML = marked.parse(editor.value);
+    const md = editor.value;
+    // 탭 블록을 먼저 처리한 뒤 나머지 마크다운 파싱
+    const processed = preprocessTabs(md);
+    // 탭 블록은 이미 HTML이므로, 탭이 아닌 부분만 marked로 파싱
+    // preprocessTabs가 탭 블록을 HTML로 치환했으므로, 나머지를 파싱
+    preview.innerHTML = processed.includes('md-tabs') ? processWithTabs(md) : marked.parse(md);
     wrapCodeBlocks();
     updateStats();
   }, 80);
+}
+
+function processWithTabs(md) {
+  // 탭 블록을 플레이스홀더로 치환 → 나머지 마크다운 파싱 → 플레이스홀더 복원
+  tabGroupCounter = 0;
+  const tabBlocks = [];
+  const placeholder = md.replace(/:::tabs\s*\n([\s\S]*?):::/g, (match, inner) => {
+    const groupId = 'tabgroup-' + (tabGroupCounter++);
+    const tabSections = inner.split(/^::tab\s+(.+)$/gm).filter(s => s.trim() !== '');
+
+    const tabs = [];
+    for (let i = 0; i < tabSections.length; i += 2) {
+      tabs.push({
+        name: tabSections[i].trim(),
+        content: (tabSections[i + 1] || '').trim()
+      });
+    }
+
+    if (tabs.length === 0) return match;
+
+    let html = `<div class="md-tabs" data-group="${groupId}"><div class="md-tabs-header">`;
+    tabs.forEach((tab, idx) => {
+      html += `<button class="md-tab-btn${idx === 0 ? ' active' : ''}" onclick="switchTab('${groupId}', ${idx})">${tab.name}</button>`;
+    });
+    html += '</div>';
+    tabs.forEach((tab, idx) => {
+      const parsed = marked.parse(tab.content);
+      html += `<div class="md-tab-content${idx === 0 ? ' active' : ''}" data-tab-idx="${idx}">${parsed}</div>`;
+    });
+    html += '</div>';
+
+    const key = `%%TAB_BLOCK_${tabBlocks.length}%%`;
+    tabBlocks.push(html);
+    return key;
+  });
+
+  let result = marked.parse(placeholder);
+  // 플레이스홀더 복원
+  tabBlocks.forEach((html, i) => {
+    result = result.replace(`<p>%%TAB_BLOCK_${i}%%</p>`, html);
+    result = result.replace(`%%TAB_BLOCK_${i}%%`, html);
+  });
+  return result;
 }
 
 // ── 코드블록 macOS 헤더 래핑 ──
@@ -1358,6 +1601,11 @@ function insertImage() {
 function insertTable() {
   const table = '\n| 제목 1 | 제목 2 | 제목 3 |\n|--------|--------|--------|\n| 내용 1 | 내용 2 | 내용 3 |\n| 내용 4 | 내용 5 | 내용 6 |\n';
   insertText(table, '');
+}
+
+function insertTabBlock() {
+  const template = `\n:::tabs\n::tab 탭 1\n\n내용을 작성하세요.\n\n::tab 탭 2\n\n내용을 작성하세요.\n\n::tab 탭 3\n\n내용을 작성하세요.\n\n:::\n`;
+  insertText(template, '');
 }
 
 // ── View switching ──
