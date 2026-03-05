@@ -2,7 +2,7 @@
   <img src="https://img.shields.io/badge/MDCRAFT-Markdown%20Editor-6c5ce7?style=for-the-badge&logo=markdown&logoColor=white" alt="MDCRAFT">
 </p>
 
-<h1 align="center">M↓ MDCRAFT</h1>
+<h1 align="center">MDCRAFT</h1>
 
 <p align="center">
   <strong>실시간 미리보기를 지원하는 온라인 마크다운 에디터</strong><br>
